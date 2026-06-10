@@ -23,8 +23,6 @@
   }
   * { box-sizing: border-box; margin: 0; padding: 0; }
   
-  /* CORRECTION 1 : On force le html et le body à prendre 100% de la vraie hauteur,
-     et on ajoute une couleur unie noire en secours pour bloquer les fuites de lumière du navigateur */
   html, body {
     height: 100%;
     background-color: #07050a; 
@@ -37,13 +35,11 @@
     display: flex;
     justify-content: center;
     align-items: center;
-    min-height: 100vh;
-    min-height: -webkit-fill-available; /* Force la hauteur exacte sans la barre d'adresse */
+    height: 100vh; /* Utilise une hauteur fixe stricte pour éviter les sauts */
     -webkit-user-select: none;
     user-select: none;
     -webkit-tap-highlight-color: transparent;
     overflow: hidden;
-    /* CORRECTION 2 : On prend en compte la zone de sécurité basse des smartphones (Safe Area) */
     padding-bottom: env(safe-area-inset-bottom); 
   }
   .wrapper {
@@ -52,11 +48,10 @@
     background: var(--panel);
     backdrop-filter: blur(24px);
     -webkit-backdrop-filter: blur(24px);
-    padding: 28px 22px 24px;
+    padding: 24px 22px; /* Léger ajustement pour l'équilibre */
     border-radius: var(--radius);
     border: 1px solid var(--border);
     box-shadow: 0 0 0 1px rgba(255,255,255,0.02) inset, 0 24px 60px rgba(0,0,0,0.8);
-    /* Empêche les bugs de rafraîchissement graphique sur mobile */
     transform: translateZ(0); 
   }
   .title-row { text-align: center; margin-bottom: 22px; }
@@ -85,9 +80,12 @@
   .glow-gold   { box-shadow: 0 0 0 2px rgba(212,175,55,0.6);  animation: glowRing 0.8s ease forwards; }
   .glow-red    { box-shadow: 0 0 0 2px rgba(244,63,94,0.7);   animation: glowRing 0.8s ease forwards; }
   .glow-purple { box-shadow: 0 0 0 2px rgba(168,85,247,0.7);  animation: glowRing 0.8s ease forwards; }
-  .info-panel { background: rgba(0,0,0,0.18); border: 1px solid rgba(255,255,255,0.03); border-radius: 16px; padding: 16px 15px; min-height: 80px; margin-bottom: 18px; display: flex; flex-direction: column; justify-content: center; align-items: center; text-align: center; gap: 6px; }
+  
+  /* CORRECTION : Hauteur fixe à 102px pour accueillir le texte le plus long sans jamais faire bouger le bloc */
+  .info-panel { background: rgba(0,0,0,0.18); border: 1px solid rgba(255,255,255,0.03); border-radius: 16px; padding: 12px 15px; height: 102px; margin-bottom: 18px; display: flex; flex-direction: column; justify-content: center; align-items: center; text-align: center; gap: 6px; }
   .info-tag { font-size: 0.6rem; letter-spacing: 2px; text-transform: uppercase; color: var(--muted); background: rgba(255,255,255,0.04); padding: 3px 10px; border-radius: 20px; }
-  .info-text { font-size: 0.88rem; font-weight: 300; line-height: 1.55; color: var(--main); }
+  .info-text { font-size: 0.85rem; font-weight: 300; line-height: 1.45; color: var(--main); }
+  
   .t-danger  { color: var(--crimson);   font-weight: 500; }
   .t-success { color: var(--success);   font-weight: 500; }
   .t-bonus   { color: var(--purple);    font-weight: 500; }
@@ -158,7 +156,7 @@
 </div>
 
 <script>
-const WIN = 35; // Objectif réglé sur 35 comme demandé précédemment
+const WIN = 35;
 
 const DOTS = {
   1: [[40,40]],
