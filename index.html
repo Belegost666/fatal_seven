@@ -6,7 +6,7 @@
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="theme-color" content="#07050a">
-<title>Le 7 Fatidique</title>
+<title>Le 7 Fatal</title>
 <style>
   :root {
     --bg: radial-gradient(ellipse at 30% 20%, #1a0f2e 0%, #07050a 60%);
@@ -96,8 +96,7 @@
 <body>
 <div class="wrapper">
   <div class="title-row">
-    <h1>Le 7 Fatidique</h1>
-    <div class="subtitle">Discipline &amp; Hasard</div>
+    <h1>Le 7 Fatal</h1>
   </div>
 
   <div class="dashboard">
@@ -133,7 +132,7 @@
 
   <div class="info-panel">
     <div class="info-tag" id="ui-tag">Statut</div>
-    <div class="info-text" id="ui-text">Prêt pour votre session ? Lancez les dés pour démarrer le Round 1.</div>
+    <div class="info-text" id="ui-text">Prêt ? Lancez les dés pour démarrer le Round 1.</div>
   </div>
 
   <div class="timer-wrap" id="timer-wrap">
@@ -192,7 +191,7 @@ class Game {
     s1.classList.add('rolling-die'); s2.classList.add('rolling-die');
     const a1 = animDots(s1), a2 = animDots(s2);
     let rv = setInterval(() => this.vib(15), 70);
-    this.setTag('Lancer en cours…'); this.setText('Le destin mélange les dés...');
+    this.setTag('Lancer en cours…'); this.setText('Mélange des dés...');
     setTimeout(() => {
       clearInterval(rv); clearInterval(a1); clearInterval(a2);
       s1.classList.remove('rolling-die'); s2.classList.remove('rolling-die');
@@ -214,7 +213,7 @@ class Game {
     if (this.total === 7) {
       this.phase = 'END'; this.triggerGlow('red'); this.vib([300,100,300,100,500]);
       this.setTag(`Résultat : ${this.d1} + ${this.d2} = 7`);
-      this.setText(`<span class="t-danger">CRASH !</span> Le couperet est tombé. Session terminée immédiatement. <span class="t-danger">Déni total.</span>`);
+      this.setText(`<span class="t-danger">7 !</span> Session terminée immédiatement. <span class="t-danger">Interdiction de jouir.</span>`);
       this.updateUI(); return;
     }
     this.score += this.total;
@@ -222,17 +221,17 @@ class Game {
     if (this.score >= WIN) {
       this.phase = 'END'; this.vib([100,50,100,50,100,50,400]);
       this.setTag(`Victoire — Score : ${this.score} / ${WIN}`);
-      this.setText(`<span class="t-success">Victoire interdite !</span> Score de ${this.score}/${WIN} atteint. L'orgasme complet et libérateur vous est accordé.`);
+      this.setText(`<span class="t-success">Victoire !</span> Score de ${this.score}/${WIN} atteint. Vous avez le droit de jouir !`);
       this.updateUI(); return;
     }
     this.phase = 'EDGING'; this.vib(80);
     this.setTag(`Round ${this.lancers} / 5 · +${this.total} pts`);
     if (this.lancers === 1) {
-      this.setText(`<span class="t-gold">Premier round (Immunité 7 active)</span><br>Commencez avec <b>${this.total}</b> — soit <b>${this.total} minutes</b> d'edging strict.`);
+      this.setText(`<span class="t-gold">Premier round</span><br>Commencez avec <b>${this.total}</b> — soit <b>${this.total} minutes</b> de masturbation sans jouir.`);
     } else if (this.lancers === 5) {
-      this.setText(`Score : ${this.score}/${WIN}.<br><span class="t-danger">Dernier round :</span> Purgez <b>${this.total} min</b> d'edging avant le verdict final.`);
+      this.setText(`Score : ${this.score}/${WIN}.<br><span class="t-danger">Dernier round :</span> Masturbez-vous pendant <b>${this.total} min</b> avant le verdict final.`);
     } else {
-      this.setText(`<span class="t-gold">Consigne :</span> Pratiquez l'edging strict pendant <b>${this.total} minutes</b> sans franchir la ligne.`);
+      this.setText(`<span class="t-gold">Consigne :</span> Masturbez-vous sans jouir pendant <b>${this.total} minutes</b>.`);
     }
     this.updateUI();
     this.startTimer(this.total * 60);
@@ -243,10 +242,10 @@ class Game {
     this.setTag(`Lancer bonus : ${this.d1} + ${this.d2}`);
     if (this.d1 === this.d2) {
       this.triggerGlow('purple'); this.vib([200,100,200,100,200]);
-      this.setText(`<span class="t-bonus">Double réussi !</span><br>Le hasard a eu pitié. Vous gagnez le droit à un <span class="t-bonus">orgasme ruiné</span>. Stimulez jusqu'à l'inévitable, puis stoppez tout au dernier instant.`);
+      this.setText(`<span class="t-bonus">Double réussi !</span><br>Le hasard a eu pitié. Vous gagnez le droit à un <span class="t-bonus">orgasme ruiné</span>. Masturbez-vous jusqu'à l'orgasme, puis stoppez la stimulation tout au dernier instant.`);
     } else {
       this.triggerGlow('red'); this.vib([600]);
-      this.setText(`<span class="t-danger">Échec du double.</span><br>Le destin reste de marbre. Session terminée — l'accès au plaisir vous est définitivement refusé. <span class="t-danger">Déni cruel.</span>`);
+      this.setText(`<span class="t-danger">Échec du double.</span><br>Session terminée. <span class="t-danger">Vous n'êtes pas autorisé à jouir !</span>`);
     }
     this.updateUI();
   }
@@ -270,11 +269,11 @@ class Game {
     if (this.lancers >= 5 && this.score < WIN) {
       this.phase = 'BONUS_ROLL';
       this.setTag('Verdict : score insuffisant');
-      this.setText(`Les 5 rounds sont faits mais le score plafonne à ${this.score}/${WIN}.<br><span class="t-bonus">Lancer bonus de la dernière chance :</span> Tentez un double pour un orgasme ruiné !`);
+      this.setText(`Fin des 5 rounds. Votre score est insuffisant : ${this.score}/${WIN}.<br><span class="t-bonus">Lancer bonus :</span> Tentez un double pour un orgasme ruiné !`);
     } else {
       this.phase = 'ROLL';
       this.setTag('Chrono terminé');
-      this.setText('Temps réglementaire validé. Reprenez vos esprits et relancez les dés.');
+      this.setText('Temps réglementaire validé. Relancez les dés sans attendre.');
     }
     this.updateUI();
   }
