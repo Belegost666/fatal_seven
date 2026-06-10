@@ -221,7 +221,7 @@ class Game {
     if (this.score >= WIN) {
       this.phase = 'END'; this.vib([100,50,100,50,100,50,400]);
       this.setTag(`Victoire — Score : ${this.score} / ${WIN}`);
-      this.setText(`<span class="t-success">Victoire !</span> Score de ${this.score}/${WIN} atteint. Vous avez le droit de jouir !`);
+      this.setText(`<span class="t-success">Victoire !</span> Score de ${this.score}/${WIN} atteint. Vous avez le droit de jouir à la fin du chrono !`);
       this.updateUI(); return;
     }
     this.phase = 'EDGING'; this.vib(80);
