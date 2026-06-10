@@ -1,0 +1,328 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="theme-color" content="#07050a">
+<title>Le 7 Fatidique</title>
+<style>
+  :root {
+    --bg: radial-gradient(ellipse at 30% 20%, #1a0f2e 0%, #07050a 60%);
+    --panel: rgba(18, 14, 28, 0.85);
+    --border: rgba(255,255,255,0.06);
+    --crimson: #f43f5e;
+    --gold: #d4af37;
+    --gold-text: #f0c060;
+    --purple: #a855f7;
+    --muted: #6b7280;
+    --main: #f3f4f6;
+    --success: #34d399;
+    --radius: 24px;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    background: var(--bg);
+    color: var(--main);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    min-height: 100vh;
+    -webkit-user-select: none;
+    user-select: none;
+    -webkit-tap-highlight-color: transparent;
+    overflow: hidden;
+  }
+  .wrapper {
+    width: 92%;
+    max-width: 370px;
+    background: var(--panel);
+    backdrop-filter: blur(24px);
+    -webkit-backdrop-filter: blur(24px);
+    padding: 28px 22px 24px;
+    border-radius: var(--radius);
+    border: 1px solid var(--border);
+    box-shadow: 0 0 0 1px rgba(255,255,255,0.02) inset, 0 24px 60px rgba(0,0,0,0.8);
+  }
+  .title-row { text-align: center; margin-bottom: 22px; }
+  h1 { font-size: 1.15rem; font-weight: 200; letter-spacing: 5px; text-transform: uppercase; color: var(--main); margin-bottom: 4px; }
+  .subtitle { font-size: 0.6rem; letter-spacing: 3px; text-transform: uppercase; color: var(--crimson); opacity: 0.85; }
+  .dashboard { display: flex; gap: 10px; margin-bottom: 22px; }
+  .stat-box { flex: 1; background: rgba(0,0,0,0.25); border: 1px solid rgba(255,255,255,0.04); border-radius: 14px; padding: 10px 0 8px; text-align: center; }
+  .stat-label { font-size: 0.58rem; text-transform: uppercase; letter-spacing: 1.5px; color: var(--muted); display: block; margin-bottom: 5px; }
+  .stat-val { font-size: 1.15rem; font-weight: 300; color: var(--gold-text); letter-spacing: 1px; }
+  .score-bar-wrap { background: rgba(0,0,0,0.3); border-radius: 4px; height: 3px; margin: 6px 12px 0; overflow: hidden; }
+  .score-bar-fill { height: 100%; background: linear-gradient(90deg, var(--gold) 0%, var(--gold-text) 100%); border-radius: 4px; transition: width 0.6s cubic-bezier(0.25,1,0.5,1); width: 0%; }
+  .dice-container { display: flex; justify-content: center; gap: 22px; margin: 4px 0 22px; }
+  .die-wrap { position: relative; width: 80px; height: 80px; }
+  .die-wrap svg { width: 80px; height: 80px; border-radius: 18px; overflow: visible; }
+  @keyframes rollAnim {
+    0%   { transform: scale(1) rotate(0deg); }
+    15%  { transform: scale(1.08) rotate(90deg); }
+    35%  { transform: scale(1.12) rotate(270deg); }
+    60%  { transform: scale(1.1) rotate(600deg); }
+    80%  { transform: scale(1.04) rotate(900deg); }
+    100% { transform: scale(1) rotate(1080deg); }
+  }
+  .rolling-die { animation: rollAnim 1.2s cubic-bezier(0.2,0.8,0.4,1) forwards; }
+  @keyframes glowRing { 0% { opacity: 0; transform: scale(0.85); } 40% { opacity: 1; } 100% { opacity: 0; transform: scale(1.3); } }
+  .glow-ring { position: absolute; inset: -6px; border-radius: 24px; pointer-events: none; opacity: 0; }
+  .glow-gold   { box-shadow: 0 0 0 2px rgba(212,175,55,0.6);  animation: glowRing 0.8s ease forwards; }
+  .glow-red    { box-shadow: 0 0 0 2px rgba(244,63,94,0.7);   animation: glowRing 0.8s ease forwards; }
+  .glow-purple { box-shadow: 0 0 0 2px rgba(168,85,247,0.7);  animation: glowRing 0.8s ease forwards; }
+  .info-panel { background: rgba(0,0,0,0.18); border: 1px solid rgba(255,255,255,0.03); border-radius: 16px; padding: 16px 15px; min-height: 80px; margin-bottom: 18px; display: flex; flex-direction: column; justify-content: center; align-items: center; text-align: center; gap: 6px; }
+  .info-tag { font-size: 0.6rem; letter-spacing: 2px; text-transform: uppercase; color: var(--muted); background: rgba(255,255,255,0.04); padding: 3px 10px; border-radius: 20px; }
+  .info-text { font-size: 0.88rem; font-weight: 300; line-height: 1.55; color: var(--main); }
+  .t-danger  { color: var(--crimson);   font-weight: 500; }
+  .t-success { color: var(--success);   font-weight: 500; }
+  .t-bonus   { color: var(--purple);    font-weight: 500; }
+  .t-gold    { color: var(--gold-text); font-weight: 500; }
+  .timer-wrap { text-align: center; margin-bottom: 14px; display: none; }
+  .timer-digits { font-size: 3rem; font-weight: 100; letter-spacing: 2px; color: var(--gold-text); font-variant-numeric: tabular-nums; }
+  .timer-label { font-size: 0.6rem; letter-spacing: 2px; text-transform: uppercase; color: var(--muted); margin-top: 2px; }
+  .rounds-row { display: flex; justify-content: center; gap: 8px; margin-bottom: 16px; }
+  .round-dot { width: 8px; height: 8px; border-radius: 50%; background: rgba(255,255,255,0.1); border: 1px solid rgba(255,255,255,0.12); transition: all 0.3s ease; }
+  .round-dot.done   { background: var(--gold); border-color: var(--gold); }
+  .round-dot.active { background: transparent; border-color: var(--gold-text); box-shadow: 0 0 6px rgba(212,175,55,0.4); }
+  .btn-main { width: 100%; background: transparent; border: 1px solid var(--gold); color: var(--gold-text); padding: 16px 28px; font-size: 0.78rem; text-transform: uppercase; letter-spacing: 2.5px; border-radius: 50px; cursor: pointer; transition: background 0.15s, transform 0.1s; }
+  .btn-main:active:not(:disabled) { background: rgba(212,175,55,0.1); transform: scale(0.98); }
+  .btn-main:disabled { border-color: rgba(255,255,255,0.06); color: var(--muted); cursor: default; }
+  .btn-main.purple { border-color: var(--purple); color: var(--purple); }
+  .btn-skip { display: none; width: 100%; background: none; border: none; color: rgba(255,255,255,0.18); font-size: 0.7rem; text-transform: uppercase; letter-spacing: 1.5px; margin-top: 14px; padding: 8px; cursor: pointer; text-decoration: underline; text-underline-offset: 3px; }
+</style>
+</head>
+<body>
+<div class="wrapper">
+  <div class="title-row">
+    <h1>Le 7 Fatidique</h1>
+    <div class="subtitle">Discipline &amp; Hasard</div>
+  </div>
+
+  <div class="dashboard">
+    <div class="stat-box">
+      <span class="stat-label">Score</span>
+      <span class="stat-val" id="ui-score">0 / 30</span>
+      <div class="score-bar-wrap"><div class="score-bar-fill" id="score-bar"></div></div>
+    </div>
+    <div class="stat-box">
+      <span class="stat-label">Rounds</span>
+      <span class="stat-val" id="ui-lancers">0 / 5</span>
+    </div>
+  </div>
+
+  <div class="rounds-row">
+    <div class="round-dot active" id="rd0"></div>
+    <div class="round-dot" id="rd1"></div>
+    <div class="round-dot" id="rd2"></div>
+    <div class="round-dot" id="rd3"></div>
+    <div class="round-dot" id="rd4"></div>
+  </div>
+
+  <div class="dice-container">
+    <div class="die-wrap" id="die-wrap-1">
+      <div class="glow-ring" id="glow1"></div>
+      <svg id="d1" viewBox="0 0 80 80" xmlns="http://www.w3.org/2000/svg"></svg>
+    </div>
+    <div class="die-wrap" id="die-wrap-2">
+      <div class="glow-ring" id="glow2"></div>
+      <svg id="d2" viewBox="0 0 80 80" xmlns="http://www.w3.org/2000/svg"></svg>
+    </div>
+  </div>
+
+  <div class="info-panel">
+    <div class="info-tag" id="ui-tag">Statut</div>
+    <div class="info-text" id="ui-text">Prêt pour votre session ? Lancez les dés pour démarrer le Round 1.</div>
+  </div>
+
+  <div class="timer-wrap" id="timer-wrap">
+    <div class="timer-digits" id="ui-timer">00:00</div>
+    <div class="timer-label">Restant</div>
+  </div>
+
+  <button class="btn-main" id="ui-btn" onclick="G.click()">Lancer les dés</button>
+  <button class="btn-skip" id="ui-skip" onclick="G.skip()">Passer le chrono</button>
+</div>
+
+<script>
+const WIN = 30;
+
+const DOTS = {
+  1: [[40,40]],
+  2: [[22,22],[58,58]],
+  3: [[22,22],[40,40],[58,58]],
+  4: [[22,22],[58,22],[22,58],[58,58]],
+  5: [[22,22],[58,22],[40,40],[22,58],[58,58]],
+  6: [[22,20],[58,20],[22,40],[58,40],[22,60],[58,60]]
+};
+
+function renderDie(svgEl, value) {
+  const isQ = value === '?';
+  let inner = `<rect x="2" y="2" width="76" height="76" rx="16" fill="#0a0814" stroke="${isQ ? 'rgba(255,255,255,0.1)' : 'rgba(212,175,55,0.35)'}" stroke-width="${isQ ? 1 : 1.5}"/>`;
+  if (isQ) {
+    inner += `<text x="40" y="50" text-anchor="middle" font-size="32" font-weight="200" fill="#c49a2a" font-family="-apple-system,sans-serif">?</text>`;
+  } else {
+    DOTS[value].forEach(([cx,cy]) => { inner += `<circle cx="${cx}" cy="${cy}" r="5.5" fill="#e8b84b"/>`; });
+  }
+  svgEl.innerHTML = inner;
+}
+
+function animDots(svgEl) {
+  const seq = [1,2,3,4,5,6,1,2,3,4,5,6];
+  let i = 0;
+  return setInterval(() => { renderDie(svgEl, seq[i++ % seq.length]); }, 80);
+}
+
+class Game {
+  constructor() { this.score = 0; this.lancers = 0; this.phase = 'ROLL'; this.timer = null; this.d1 = 0; this.d2 = 0; }
+  get total() { return this.d1 + this.d2; }
+  vib(p) { if ('vibrate' in navigator) navigator.vibrate(p); }
+
+  click() {
+    if (this.phase === 'ROLL') this.roll(false);
+    else if (this.phase === 'BONUS_ROLL') this.roll(true);
+    else if (this.phase === 'END') this.reset();
+  }
+
+  roll(isBonus) {
+    const btn = document.getElementById('ui-btn');
+    const s1 = document.getElementById('d1'), s2 = document.getElementById('d2');
+    btn.disabled = true;
+    s1.classList.add('rolling-die'); s2.classList.add('rolling-die');
+    const a1 = animDots(s1), a2 = animDots(s2);
+    let rv = setInterval(() => this.vib(15), 70);
+    this.setTag('Lancer en cours…'); this.setText('Le destin mélange les dés...');
+    setTimeout(() => {
+      clearInterval(rv); clearInterval(a1); clearInterval(a2);
+      s1.classList.remove('rolling-die'); s2.classList.remove('rolling-die');
+      let r1, r2;
+      if (isBonus) {
+        r1 = Math.floor(Math.random()*6)+1; r2 = Math.floor(Math.random()*6)+1;
+      } else {
+        do { r1 = Math.floor(Math.random()*6)+1; r2 = Math.floor(Math.random()*6)+1; }
+        while (this.lancers === 0 && r1+r2 === 7);
+      }
+      this.d1 = r1; this.d2 = r2;
+      renderDie(s1, r1); renderDie(s2, r2);
+      if (isBonus) this.evalBonus(); else { this.lancers++; this.evalRules(); }
+    }, 1200);
+  }
+
+  evalRules() {
+    this.updateDots();
+    if (this.total === 7) {
+      this.phase = 'END'; this.triggerGlow('red'); this.vib([300,100,300,100,500]);
+      this.setTag(`Résultat : ${this.d1} + ${this.d2} = 7`);
+      this.setText(`<span class="t-danger">CRASH !</span> Le couperet est tombé. Session terminée immédiatement. <span class="t-danger">Déni total.</span>`);
+      this.updateUI(); return;
+    }
+    this.score += this.total;
+    this.triggerGlow('gold');
+    if (this.score >= WIN) {
+      this.phase = 'END'; this.vib([100,50,100,50,100,50,400]);
+      this.setTag(`Victoire — Score : ${this.score} / ${WIN}`);
+      this.setText(`<span class="t-success">Victoire interdite !</span> Score de ${this.score}/${WIN} atteint. L'orgasme complet et libérateur vous est accordé.`);
+      this.updateUI(); return;
+    }
+    this.phase = 'EDGING'; this.vib(80);
+    this.setTag(`Round ${this.lancers} / 5 · +${this.total} pts`);
+    if (this.lancers === 1) {
+      this.setText(`<span class="t-gold">Premier round (Immunité 7 active)</span><br>Commencez avec <b>${this.total}</b> — soit <b>${this.total} minutes</b> d'edging strict.`);
+    } else if (this.lancers === 5) {
+      this.setText(`Score : ${this.score}/${WIN}.<br><span class="t-danger">Dernier round :</span> Purgez <b>${this.total} min</b> d'edging avant le verdict final.`);
+    } else {
+      this.setText(`<span class="t-gold">Consigne :</span> Pratiquez l'edging strict pendant <b>${this.total} minutes</b> sans franchir la ligne.`);
+    }
+    this.updateUI();
+    this.startTimer(this.total * 60);
+  }
+
+  evalBonus() {
+    this.phase = 'END';
+    this.setTag(`Lancer bonus : ${this.d1} + ${this.d2}`);
+    if (this.d1 === this.d2) {
+      this.triggerGlow('purple'); this.vib([200,100,200,100,200]);
+      this.setText(`<span class="t-bonus">Double réussi !</span><br>Le hasard a eu pitié. Vous gagnez le droit à un <span class="t-bonus">orgasme ruiné</span>. Stimulez jusqu'à l'inévitable, puis stoppez tout au dernier instant.`);
+    } else {
+      this.triggerGlow('red'); this.vib([600]);
+      this.setText(`<span class="t-danger">Échec du double.</span><br>Le destin reste de marbre. Session terminée — l'accès au plaisir vous est définitivement refusé. <span class="t-danger">Déni cruel.</span>`);
+    }
+    this.updateUI();
+  }
+
+  triggerGlow(type) {
+    ['glow1','glow2'].forEach(id => {
+      const el = document.getElementById(id);
+      el.className = 'glow-ring'; void el.offsetWidth;
+      el.className = `glow-ring glow-${type}`;
+    });
+  }
+
+  startTimer(s) {
+    const fmt = n => `${String(Math.floor(n/60)).padStart(2,'0')}:${String(n%60).padStart(2,'0')}`;
+    document.getElementById('ui-timer').innerText = fmt(s);
+    this.timer = setInterval(() => { s--; document.getElementById('ui-timer').innerText = fmt(s); if (s <= 0) this.endTimer(); }, 1000);
+  }
+
+  endTimer() {
+    clearInterval(this.timer); this.vib([150,100,150]);
+    if (this.lancers >= 5 && this.score < WIN) {
+      this.phase = 'BONUS_ROLL';
+      this.setTag('Verdict : score insuffisant');
+      this.setText(`Les 5 rounds sont faits mais le score plafonne à ${this.score}/${WIN}.<br><span class="t-bonus">Lancer bonus de la dernière chance :</span> Tentez un double pour un orgasme ruiné !`);
+    } else {
+      this.phase = 'ROLL';
+      this.setTag('Chrono terminé');
+      this.setText('Temps réglementaire validé. Reprenez vos esprits et relancez les dés.');
+    }
+    this.updateUI();
+  }
+
+  skip() { clearInterval(this.timer); this.endTimer(); }
+
+  updateDots() {
+    for (let i = 0; i < 5; i++) {
+      const d = document.getElementById(`rd${i}`);
+      d.className = 'round-dot' + (i < this.lancers ? ' done' : i === this.lancers ? ' active' : '');
+    }
+  }
+
+  updateUI() {
+    document.getElementById('ui-score').innerText = `${this.score} / ${WIN}`;
+    document.getElementById('ui-lancers').innerText = `${this.lancers} / 5`;
+    document.getElementById('score-bar').style.width = `${Math.min(this.score/WIN*100,100)}%`;
+    const btn = document.getElementById('ui-btn');
+    const tw = document.getElementById('timer-wrap');
+    const sk = document.getElementById('ui-skip');
+    btn.className = 'btn-main';
+    if (this.phase === 'ROLL') {
+      btn.innerText = 'Lancer les dés'; btn.disabled = false; tw.style.display = 'none'; sk.style.display = 'none';
+    } else if (this.phase === 'EDGING') {
+      btn.innerText = 'Session en cours…'; btn.disabled = true; tw.style.display = 'block'; sk.style.display = 'block';
+    } else if (this.phase === 'BONUS_ROLL') {
+      btn.innerText = 'Lancer bonus — Dernière chance'; btn.disabled = false; tw.style.display = 'none'; sk.style.display = 'none'; btn.className = 'btn-main purple';
+    } else if (this.phase === 'END') {
+      btn.innerText = 'Recommencer une partie'; btn.disabled = false; tw.style.display = 'none'; sk.style.display = 'none';
+    }
+  }
+
+  setTag(t) { document.getElementById('ui-tag').innerText = t; }
+  setText(h) { document.getElementById('ui-text').innerHTML = h; }
+
+  reset() {
+    this.score = 0; this.lancers = 0; this.phase = 'ROLL'; this.d1 = 0; this.d2 = 0;
+    clearInterval(this.timer);
+    renderDie(document.getElementById('d1'), '?'); renderDie(document.getElementById('d2'), '?');
+    document.getElementById('score-bar').style.width = '0%';
+    this.setTag('Statut'); this.setText('Nouvelle partie. Lancez les dés pour démarrer le Round 1.');
+    for (let i = 0; i < 5; i++) document.getElementById(`rd${i}`).className = 'round-dot' + (i === 0 ? ' active' : '');
+  }
+}
+
+const G = new Game();
+renderDie(document.getElementById('d1'), '?');
+renderDie(document.getElementById('d2'), '?');
+</script>
+</body>
+</html>
