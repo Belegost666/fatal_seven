@@ -22,6 +22,14 @@
     --radius: 24px;
   }
   * { box-sizing: border-box; margin: 0; padding: 0; }
+  
+  /* CORRECTION 1 : On force le html et le body à prendre 100% de la vraie hauteur,
+     et on ajoute une couleur unie noire en secours pour bloquer les fuites de lumière du navigateur */
+  html, body {
+    height: 100%;
+    background-color: #07050a; 
+  }
+  
   body {
     font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
     background: var(--bg);
@@ -30,10 +38,13 @@
     justify-content: center;
     align-items: center;
     min-height: 100vh;
+    min-height: -webkit-fill-available; /* Force la hauteur exacte sans la barre d'adresse */
     -webkit-user-select: none;
     user-select: none;
     -webkit-tap-highlight-color: transparent;
     overflow: hidden;
+    /* CORRECTION 2 : On prend en compte la zone de sécurité basse des smartphones (Safe Area) */
+    padding-bottom: env(safe-area-inset-bottom); 
   }
   .wrapper {
     width: 92%;
@@ -45,6 +56,8 @@
     border-radius: var(--radius);
     border: 1px solid var(--border);
     box-shadow: 0 0 0 1px rgba(255,255,255,0.02) inset, 0 24px 60px rgba(0,0,0,0.8);
+    /* Empêche les bugs de rafraîchissement graphique sur mobile */
+    transform: translateZ(0); 
   }
   .title-row { text-align: center; margin-bottom: 22px; }
   h1 { font-size: 1.15rem; font-weight: 200; letter-spacing: 5px; text-transform: uppercase; color: var(--main); margin-bottom: 4px; }
@@ -145,7 +158,7 @@
 </div>
 
 <script>
-const WIN = 35;
+const WIN = 35; // Objectif réglé sur 35 comme demandé précédemment
 
 const DOTS = {
   1: [[40,40]],
@@ -222,7 +235,7 @@ class Game {
     if (this.score >= WIN) {
       this.phase = 'EDGING'; this.vib([100,50,100,50,100,50,400]);
       this.setTag(`Victoire en vue ! · +${this.total} pts`);
-      this.setText(`<span class="t-success">Score de ${this.score}/${WIN} atteint !</span><br>Ultime effort : Masturbez-vous pendant <b>${this.total} minutes</b>. Délivrance à la fin du chrono !`);
+      this.setText(`<span class="t-success">Score de ${this.score}/${WIN} atteint !</span><br>Masturbez-vous pendant <b>${this.total} minutes</b>. Vous aurez le droit de jouir à la fin du chrono !`);
       this.updateUI();
       this.startTimer(this.total * 60);
       return;
@@ -244,10 +257,9 @@ class Game {
   evalBonus() {
     this.setTag(`Lancer bonus : ${this.d1} + ${this.d2}`);
     if (this.d1 === this.d2) {
-      // MODIFICATION : Au lieu de finir directement, on lance le chrono bonus
       this.phase = 'EDGING'; 
       this.triggerGlow('purple'); this.vib([200,100,200,100,200]);
-      this.setText(`<span class="t-bonus">Double réussi (${this.d1}x2) !</span><br>Le hasard a eu pitié. Masturbez-vous pendant les <b>${this.total} minutes</b> réglementaires avant d'accéder à votre orgasme ruiné.`);
+      this.setText(`<span class="t-bonus">Double réussi (${this.d1}x2) !</span><br>Le hasard a eu pitié. Masturbez-vous pendant <b>${this.total} minutes</b> avant d'accéder à votre orgasme ruiné.`);
       this.updateUI();
       this.startTimer(this.total * 60);
     } else {
@@ -275,25 +287,22 @@ class Game {
   endTimer() {
     clearInterval(this.timer); this.vib([150,100,150]);
 
-    // 1. Cas de la victoire classique (score >= 30)
     if (this.score >= WIN) {
       this.phase = 'END';
       this.setTag(`Victoire — Score final : ${this.score} / ${WIN}`);
-      this.setText(`<span class="t-success">Félicitations ! Temps réglementaire validé.</span><br><span class="t-success" style="font-size:1.1rem; font-weight:bold; display:block; margin-top:8px;">VOUS AVEZ LE DROIT DE JOUIR !</span>`);
+      this.setText(`<span class="t-success">Félicitations ! Temps validé.</span><br><span class="t-success" style="font-size:1.1rem; font-weight:bold; display:block; margin-top:8px;">VOUS AVEZ LE DROIT DE JOUIR !</span>`);
       this.updateUI();
       return;
     }
 
-    // 2. Cas du Double Réussi lors du lancer bonus (quand le temps imparti se termine)
     if (this.lancers >= 5 && this.d1 === this.d2) {
       this.phase = 'END';
       this.setTag(`Bonus validé !`);
-      this.setText(`<span class="t-bonus">Temps bonus écoulé !</span><br>Vous avez gagné le droit à votre <span class="t-bonus">orgasme ruiné</span>. Masturbez-vous jusqu'à l'orgasme, puis coupez absolument TOUTE stimulation au dernier instant.`);
+      this.setText(`<span class="t-bonus">Temps bonus écoulé !</span><br>Vous avez gagné le droit à votre <span class="t-bonus">orgasme ruiné</span>. Masturbez-vous jusqu'à l'orgasme, puis stoppez toute stimulation au dernier instant.`);
       this.updateUI();
       return;
     }
 
-    // 3. Cas standards de fin de round
     if (this.lancers >= 5 && this.score < WIN) {
       this.phase = 'BONUS_ROLL';
       this.setTag('Verdict : score insuffisant');
@@ -301,7 +310,7 @@ class Game {
     } else {
       this.phase = 'ROLL';
       this.setTag('Chrono terminé');
-      this.setText('Temps réglementaire validé. Relancez les dés sans attendre.');
+      this.setText('Temps validé. Relancez les dés sans attendre.');
     }
     this.updateUI();
   }
