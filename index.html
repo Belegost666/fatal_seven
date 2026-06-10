@@ -218,12 +218,17 @@ class Game {
     }
     this.score += this.total;
     this.triggerGlow('gold');
+
+    // BLOC DE VICTOIRE MODIFIÉ : On lance le chrono réglementaire avant de clore
     if (this.score >= WIN) {
-      this.phase = 'END'; this.vib([100,50,100,50,100,50,400]);
-      this.setTag(`Victoire — Score : ${this.score} / ${WIN}`);
-      this.setText(`<span class="t-success">Victoire !</span> Score de ${this.score}/${WIN} atteint. Vous avez le droit de jouir à la fin du chrono !`);
-      this.updateUI(); return;
+      this.phase = 'EDGING'; this.vib([100,50,100,50,100,50,400]);
+      this.setTag(`Victoire en vue ! · +${this.total} pts`);
+      this.setText(`<span class="t-success">Score de ${this.score}/${WIN} atteint !</span><br>Masturbez-vous pendant <b>${this.total} minutes</b>. Vous aurez le droit de jouir à la fin du chrono !`);
+      this.updateUI();
+      this.startTimer(this.total * 60);
+      return;
     }
+
     this.phase = 'EDGING'; this.vib(80);
     this.setTag(`Round ${this.lancers} / 5 · +${this.total} pts`);
     if (this.lancers === 1) {
@@ -266,6 +271,16 @@ class Game {
 
   endTimer() {
     clearInterval(this.timer); this.vib([150,100,150]);
+
+    // AJOUT NET : Validation finale une fois le chrono de la victoire écoulé
+    if (this.score >= WIN) {
+      this.phase = 'END';
+      this.setTag(`Victoire — Score final : ${this.score} / ${WIN}`);
+      this.setText(`<span class="t-success">Félicitations !</span><br><span class="t-success" style="font-size:1.1rem; font-weight:bold; display:block; margin-top:8px;">VOUS AVEZ LE DROIT DE JOUIR !</span>`);
+      this.updateUI();
+      return;
+    }
+
     if (this.lancers >= 5 && this.score < WIN) {
       this.phase = 'BONUS_ROLL';
       this.setTag('Verdict : score insuffisant');
