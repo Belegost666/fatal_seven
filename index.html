@@ -35,7 +35,7 @@
     display: flex;
     justify-content: center;
     align-items: center;
-    height: 100vh; /* Utilise une hauteur fixe stricte pour éviter les sauts */
+    height: 100vh;
     -webkit-user-select: none;
     user-select: none;
     -webkit-tap-highlight-color: transparent;
@@ -48,7 +48,7 @@
     background: var(--panel);
     backdrop-filter: blur(24px);
     -webkit-backdrop-filter: blur(24px);
-    padding: 24px 22px; /* Léger ajustement pour l'équilibre */
+    padding: 24px 22px;
     border-radius: var(--radius);
     border: 1px solid var(--border);
     box-shadow: 0 0 0 1px rgba(255,255,255,0.02) inset, 0 24px 60px rgba(0,0,0,0.8);
@@ -81,7 +81,6 @@
   .glow-red    { box-shadow: 0 0 0 2px rgba(244,63,94,0.7);   animation: glowRing 0.8s ease forwards; }
   .glow-purple { box-shadow: 0 0 0 2px rgba(168,85,247,0.7);  animation: glowRing 0.8s ease forwards; }
   
-  /* CORRECTION : Hauteur fixe à 102px pour accueillir le texte le plus long sans jamais faire bouger le bloc */
   .info-panel { background: rgba(0,0,0,0.18); border: 1px solid rgba(255,255,255,0.03); border-radius: 16px; padding: 12px 15px; height: 102px; margin-bottom: 18px; display: flex; flex-direction: column; justify-content: center; align-items: center; text-align: center; gap: 6px; }
   .info-tag { font-size: 0.6rem; letter-spacing: 2px; text-transform: uppercase; color: var(--muted); background: rgba(255,255,255,0.04); padding: 3px 10px; border-radius: 20px; }
   .info-text { font-size: 0.85rem; font-weight: 300; line-height: 1.45; color: var(--main); }
@@ -90,18 +89,24 @@
   .t-success { color: var(--success);   font-weight: 500; }
   .t-bonus   { color: var(--purple);    font-weight: 500; }
   .t-gold    { color: var(--gold-text); font-weight: 500; }
-  .timer-wrap { text-align: center; margin-bottom: 14px; display: none; }
+  
+  /* CORRECTION : Le chrono garde sa place à l'écran (height fixe) mais devient transparent ou cliquable selon la phase */
+  .timer-wrap { text-align: center; height: 74px; opacity: 0; pointer-events: none; transition: opacity 0.2s ease; }
   .timer-digits { font-size: 3rem; font-weight: 100; letter-spacing: 2px; color: var(--gold-text); font-variant-numeric: tabular-nums; }
   .timer-label { font-size: 0.6rem; letter-spacing: 2px; text-transform: uppercase; color: var(--muted); margin-top: 2px; }
+  
   .rounds-row { display: flex; justify-content: center; gap: 8px; margin-bottom: 16px; }
   .round-dot { width: 8px; height: 8px; border-radius: 50%; background: rgba(255,255,255,0.1); border: 1px solid rgba(255,255,255,0.12); transition: all 0.3s ease; }
   .round-dot.done   { background: var(--gold); border-color: var(--gold); }
   .round-dot.active { background: transparent; border-color: var(--gold-text); box-shadow: 0 0 6px rgba(212,175,55,0.4); }
+  
   .btn-main { width: 100%; background: transparent; border: 1px solid var(--gold); color: var(--gold-text); padding: 16px 28px; font-size: 0.78rem; text-transform: uppercase; letter-spacing: 2.5px; border-radius: 50px; cursor: pointer; transition: background 0.15s, transform 0.1s; }
   .btn-main:active:not(:disabled) { background: rgba(212,175,55,0.1); transform: scale(0.98); }
   .btn-main:disabled { border-color: rgba(255,255,255,0.06); color: var(--muted); cursor: default; }
   .btn-main.purple { border-color: var(--purple); color: var(--purple); }
-  .btn-skip { display: none; width: 100%; background: none; border: none; color: rgba(255,255,255,0.18); font-size: 0.7rem; text-transform: uppercase; letter-spacing: 1.5px; margin-top: 14px; padding: 8px; cursor: pointer; text-decoration: underline; text-underline-offset: 3px; }
+  
+  /* CORRECTION : Le bouton skip est intégré de façon fluide sans tout décaler */
+  .btn-skip { opacity: 0; pointer-events: none; width: 100%; background: none; border: none; color: rgba(255,255,255,0.18); font-size: 0.7rem; text-transform: uppercase; letter-spacing: 1.5px; margin-top: 14px; padding: 8px; cursor: pointer; text-decoration: underline; text-underline-offset: 3px; transition: opacity 0.2s ease; }
 </style>
 </head>
 <body>
@@ -322,6 +327,7 @@ class Game {
     }
   }
 
+  /* CORRECTION : Gestion de l'affichage via opacité et pointer-events pour empêcher les sauts d'interface */
   updateUI() {
     document.getElementById('ui-score').innerText = `${this.score} / ${WIN}`;
     document.getElementById('ui-lancers').innerText = `${this.lancers} / 5`;
@@ -330,14 +336,23 @@ class Game {
     const tw = document.getElementById('timer-wrap');
     const sk = document.getElementById('ui-skip');
     btn.className = 'btn-main';
+    
     if (this.phase === 'ROLL') {
-      btn.innerText = 'Lancer les dés'; btn.disabled = false; tw.style.display = 'none'; sk.style.display = 'none';
+      btn.innerText = 'Lancer les dés'; btn.disabled = false; 
+      tw.style.opacity = '0'; tw.style.pointerEvents = 'none';
+      sk.style.opacity = '0'; sk.style.pointerEvents = 'none';
     } else if (this.phase === 'EDGING') {
-      btn.innerText = 'Session en cours…'; btn.disabled = true; tw.style.display = 'block'; sk.style.display = 'block';
+      btn.innerText = 'Session en cours…'; btn.disabled = true; 
+      tw.style.opacity = '1'; tw.style.pointerEvents = 'auto';
+      sk.style.opacity = '1'; sk.style.pointerEvents = 'auto';
     } else if (this.phase === 'BONUS_ROLL') {
-      btn.innerText = 'Lancer bonus — Dernière chance'; btn.disabled = false; tw.style.display = 'none'; sk.style.display = 'none'; btn.className = 'btn-main purple';
+      btn.innerText = 'Lancer bonus — Dernière chance'; btn.disabled = false; btn.className = 'btn-main purple';
+      tw.style.opacity = '0'; tw.style.pointerEvents = 'none';
+      sk.style.opacity = '0'; sk.style.pointerEvents = 'none';
     } else if (this.phase === 'END') {
-      btn.innerText = 'Recommencer une partie'; btn.disabled = false; tw.style.display = 'none'; sk.style.display = 'none';
+      btn.innerText = 'Recommencer une partie'; btn.disabled = false; 
+      tw.style.opacity = '0'; tw.style.pointerEvents = 'none';
+      sk.style.opacity = '0'; sk.style.pointerEvents = 'none';
     }
   }
 
