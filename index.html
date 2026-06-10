@@ -102,7 +102,7 @@
   <div class="dashboard">
     <div class="stat-box">
       <span class="stat-label">Score</span>
-      <span class="stat-val" id="ui-score">0 / 30</span>
+      <span class="stat-val" id="ui-score">0 / 35</span>
       <div class="score-bar-wrap"><div class="score-bar-fill" id="score-bar"></div></div>
     </div>
     <div class="stat-box">
@@ -145,7 +145,7 @@
 </div>
 
 <script>
-const WIN = 30;
+const WIN = 35;
 
 const DOTS = {
   1: [[40,40]],
@@ -219,11 +219,10 @@ class Game {
     this.score += this.total;
     this.triggerGlow('gold');
 
-    // BLOC DE VICTOIRE MODIFIÉ : On lance le chrono réglementaire avant de clore
     if (this.score >= WIN) {
       this.phase = 'EDGING'; this.vib([100,50,100,50,100,50,400]);
       this.setTag(`Victoire en vue ! · +${this.total} pts`);
-      this.setText(`<span class="t-success">Score de ${this.score}/${WIN} atteint !</span><br>Masturbez-vous pendant <b>${this.total} minutes</b>. Vous aurez le droit de jouir à la fin du chrono !`);
+      this.setText(`<span class="t-success">Score de ${this.score}/${WIN} atteint !</span><br>Ultime effort : Masturbez-vous pendant <b>${this.total} minutes</b>. Délivrance à la fin du chrono !`);
       this.updateUI();
       this.startTimer(this.total * 60);
       return;
@@ -243,16 +242,20 @@ class Game {
   }
 
   evalBonus() {
-    this.phase = 'END';
     this.setTag(`Lancer bonus : ${this.d1} + ${this.d2}`);
     if (this.d1 === this.d2) {
+      // MODIFICATION : Au lieu de finir directement, on lance le chrono bonus
+      this.phase = 'EDGING'; 
       this.triggerGlow('purple'); this.vib([200,100,200,100,200]);
-      this.setText(`<span class="t-bonus">Double réussi !</span><br>Le hasard a eu pitié. Vous gagnez le droit à un <span class="t-bonus">orgasme ruiné</span>. Masturbez-vous jusqu'à l'orgasme, puis stoppez la stimulation tout au dernier instant.`);
+      this.setText(`<span class="t-bonus">Double réussi (${this.d1}x2) !</span><br>Le hasard a eu pitié. Masturbez-vous pendant les <b>${this.total} minutes</b> réglementaires avant d'accéder à votre orgasme ruiné.`);
+      this.updateUI();
+      this.startTimer(this.total * 60);
     } else {
+      this.phase = 'END';
       this.triggerGlow('red'); this.vib([600]);
       this.setText(`<span class="t-danger">Échec du double.</span><br>Session terminée. <span class="t-danger">Vous n'êtes pas autorisé à jouir !</span>`);
+      this.updateUI();
     }
-    this.updateUI();
   }
 
   triggerGlow(type) {
@@ -272,15 +275,25 @@ class Game {
   endTimer() {
     clearInterval(this.timer); this.vib([150,100,150]);
 
-    // AJOUT NET : Validation finale une fois le chrono de la victoire écoulé
+    // 1. Cas de la victoire classique (score >= 30)
     if (this.score >= WIN) {
       this.phase = 'END';
       this.setTag(`Victoire — Score final : ${this.score} / ${WIN}`);
-      this.setText(`<span class="t-success">Félicitations !</span><br><span class="t-success" style="font-size:1.1rem; font-weight:bold; display:block; margin-top:8px;">VOUS AVEZ LE DROIT DE JOUIR !</span>`);
+      this.setText(`<span class="t-success">Félicitations ! Temps réglementaire validé.</span><br><span class="t-success" style="font-size:1.1rem; font-weight:bold; display:block; margin-top:8px;">VOUS AVEZ LE DROIT DE JOUIR !</span>`);
       this.updateUI();
       return;
     }
 
+    // 2. Cas du Double Réussi lors du lancer bonus (quand le temps imparti se termine)
+    if (this.lancers >= 5 && this.d1 === this.d2) {
+      this.phase = 'END';
+      this.setTag(`Bonus validé !`);
+      this.setText(`<span class="t-bonus">Temps bonus écoulé !</span><br>Vous avez gagné le droit à votre <span class="t-bonus">orgasme ruiné</span>. Masturbez-vous jusqu'à l'orgasme, puis coupez absolument TOUTE stimulation au dernier instant.`);
+      this.updateUI();
+      return;
+    }
+
+    // 3. Cas standards de fin de round
     if (this.lancers >= 5 && this.score < WIN) {
       this.phase = 'BONUS_ROLL';
       this.setTag('Verdict : score insuffisant');
