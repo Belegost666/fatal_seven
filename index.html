@@ -35,7 +35,12 @@
     display: flex;
     justify-content: center;
     align-items: center;
+    
+    /* CORRECTION IOS : On force l'utilisation du Dynamic Viewport Height 
+       qui s'ajuste en temps réel aux barres de navigation d'iOS sans jamais sauter */
     height: 100vh;
+    height: 100dvh; 
+    
     -webkit-user-select: none;
     user-select: none;
     -webkit-tap-highlight-color: transparent;
@@ -90,7 +95,6 @@
   .t-bonus   { color: var(--purple);    font-weight: 500; }
   .t-gold    { color: var(--gold-text); font-weight: 500; }
   
-  /* CORRECTION : Le chrono garde sa place à l'écran (height fixe) mais devient transparent ou cliquable selon la phase */
   .timer-wrap { text-align: center; height: 74px; opacity: 0; pointer-events: none; transition: opacity 0.2s ease; }
   .timer-digits { font-size: 3rem; font-weight: 100; letter-spacing: 2px; color: var(--gold-text); font-variant-numeric: tabular-nums; }
   .timer-label { font-size: 0.6rem; letter-spacing: 2px; text-transform: uppercase; color: var(--muted); margin-top: 2px; }
@@ -105,7 +109,6 @@
   .btn-main:disabled { border-color: rgba(255,255,255,0.06); color: var(--muted); cursor: default; }
   .btn-main.purple { border-color: var(--purple); color: var(--purple); }
   
-  /* CORRECTION : Le bouton skip est intégré de façon fluide sans tout décaler */
   .btn-skip { opacity: 0; pointer-events: none; width: 100%; background: none; border: none; color: rgba(255,255,255,0.18); font-size: 0.7rem; text-transform: uppercase; letter-spacing: 1.5px; margin-top: 14px; padding: 8px; cursor: pointer; text-decoration: underline; text-underline-offset: 3px; transition: opacity 0.2s ease; }
 </style>
 </head>
@@ -327,7 +330,6 @@ class Game {
     }
   }
 
-  /* CORRECTION : Gestion de l'affichage via opacité et pointer-events pour empêcher les sauts d'interface */
   updateUI() {
     document.getElementById('ui-score').innerText = `${this.score} / ${WIN}`;
     document.getElementById('ui-lancers').innerText = `${this.lancers} / 5`;
