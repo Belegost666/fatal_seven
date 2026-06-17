@@ -55,11 +55,33 @@
     border: 1px solid var(--border);
     box-shadow: 0 0 0 1px rgba(255,255,255,0.02) inset, 0 24px 60px rgba(0,0,0,0.8);
     transform: translateZ(0);
+    position: relative;
   }
 
-  .title-row { text-align: center; margin-bottom: 22px; }
+  .title-row { text-align: center; margin-bottom: 22px; position: relative; }
   h1 { font-size: 1.15rem; font-weight: 200; letter-spacing: 5px; text-transform: uppercase; color: var(--main); margin-bottom: 4px; }
   .subtitle { font-size: 0.6rem; letter-spacing: 3px; text-transform: uppercase; color: var(--crimson); opacity: 0.85; }
+
+  /* Indicateur Wake Lock : petite icône discrète en haut à droite, visible
+     uniquement quand le verrou d'écran est actif. */
+  .wakelock-badge {
+    position: absolute;
+    top: 0;
+    right: 0;
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    font-size: 0.55rem;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    color: var(--success);
+    opacity: 0;
+    transform: translateY(-2px);
+    transition: opacity 0.3s ease, transform 0.3s ease;
+    pointer-events: none;
+  }
+  .wakelock-badge.visible { opacity: 0.85; transform: translateY(0); }
+  .wakelock-badge svg { width: 11px; height: 11px; flex-shrink: 0; }
 
   .dashboard { display: flex; gap: 10px; margin-bottom: 22px; }
   .stat-box { flex: 1; background: rgba(0,0,0,0.25); border: 1px solid rgba(255,255,255,0.04); border-radius: 14px; padding: 10px 0 8px; text-align: center; }
@@ -110,15 +132,39 @@
   .btn-main:active:not(:disabled) { background: rgba(212,175,55,0.1); transform: scale(0.98); }
   .btn-main:disabled { border-color: rgba(255,255,255,0.06); color: var(--muted); cursor: default; }
   .btn-main.purple { border-color: var(--purple); color: var(--purple); }
+  .btn-main:focus-visible { outline: 2px solid var(--gold-text); outline-offset: 2px; }
 
   /* Bouton skip : visible uniquement après un délai (protection anti-clic accidentel) */
   .btn-skip { opacity: 0; pointer-events: none; width: 100%; background: none; border: none; color: rgba(255,255,255,0.18); font-size: 0.7rem; text-transform: uppercase; letter-spacing: 1.5px; margin-top: 14px; padding: 8px; cursor: pointer; text-decoration: underline; text-underline-offset: 3px; transition: opacity 0.4s ease; }
+  .btn-skip:focus-visible { outline: 1px solid rgba(255,255,255,0.3); outline-offset: 2px; }
+
+  /* Bandeau d'avertissement si le verrou d'écran n'a pas pu être obtenu */
+  .wakelock-warning {
+    font-size: 0.6rem;
+    text-align: center;
+    color: var(--muted);
+    margin-top: 10px;
+    line-height: 1.4;
+    opacity: 0;
+    max-height: 0;
+    overflow: hidden;
+    transition: opacity 0.3s ease, max-height 0.3s ease;
+  }
+  .wakelock-warning.visible { opacity: 0.8; max-height: 40px; margin-top: 10px; }
 </style>
 </head>
 <body>
 <div class="wrapper">
   <div class="title-row">
     <h1>Le 7 Fatal</h1>
+    <div class="wakelock-badge" id="wakelock-badge" aria-hidden="true">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <path d="M1 1l22 22M16.72 11.06A10.94 10.94 0 0119 12.55 10.94 10.94 0 011 12.55a10.94 10.94 0 015.17-6.39M9.9 4.24A10.94 10.94 0 0112 4c1.55 0 3.04.34 4.39.98" stroke-linecap="round" stroke-linejoin="round" style="display:none"/>
+        <circle cx="12" cy="12" r="3"/>
+        <path d="M2 12s4-7 10-7 10 7 10 7-4 7-10 7-10-7-10-7z"/>
+      </svg>
+      <span>Écran actif</span>
+    </div>
   </div>
 
   <div class="dashboard">
@@ -154,7 +200,7 @@
 
   <div class="info-panel">
     <div class="info-tag" id="ui-tag">Statut</div>
-    <div class="info-text" id="ui-text">Prêt ? Lancez les dés pour démarrer le Round 1.</div>
+    <div class="info-text" id="ui-text" aria-live="polite">Prêt ? Lancez les dés pour démarrer le Round 1.</div>
   </div>
 
   <div class="timer-wrap" id="timer-wrap">
@@ -164,10 +210,16 @@
 
   <button class="btn-main" id="ui-btn" onclick="G.click()">Lancer les dés</button>
   <button class="btn-skip" id="ui-skip" onclick="G.skip()">Passer le chrono</button>
+  <div class="wakelock-warning" id="wakelock-warning">
+    Le maintien d'écran n'est pas disponible sur ce navigateur. Pensez à désactiver la mise en veille automatique.
+  </div>
 </div>
 
 <script>
+'use strict';
+
 const WIN = 35;
+const STORAGE_KEY = 'le7fatal_save_v1';
 
 const DOTS = {
   1: [[40,40]],
@@ -195,30 +247,103 @@ function animDots(svgEl) {
   return setInterval(() => { renderDie(svgEl, seq[i++ % seq.length]); }, 80);
 }
 
+// ─────────────────────────────────────────────────────────────────────────
+// Gestionnaire Wake Lock
+//
+// Empêche l'écran de s'éteindre pendant les phases de chrono (EDGING /
+// BONUS_TIMER). Repose sur l'API native Screen Wake Lock, supportée par
+// Chrome/Edge/Opera (Android & desktop) et Safari iOS ≥ 16.4. Si l'API
+// n'existe pas (anciens navigateurs, certains navigateurs in-app), on
+// affiche un message discret invitant l'utilisateur à désactiver la mise
+// en veille manuellement — le jeu reste pleinement fonctionnel sans elle.
+//
+// Particularité à gérer : le verrou est automatiquement relâché par le
+// navigateur quand l'onglet passe en arrière-plan (changement d'app, écran
+// verrouillé). Il faut donc le ré-acquérir au retour si une phase de chrono
+// est toujours active — sinon l'écran pourrait s'éteindre au second passage
+// en arrière-plan sans qu'on s'en rende compte.
+// ─────────────────────────────────────────────────────────────────────────
+class WakeLockManager {
+  constructor() {
+    this.sentinel   = null;
+    this.supported  = 'wakeLock' in navigator;
+    this.badge      = document.getElementById('wakelock-badge');
+    this.warning    = document.getElementById('wakelock-warning');
+
+    if (!this.supported) {
+      this.warning.classList.add('visible');
+    }
+
+    // Ré-acquisition automatique au retour au premier plan
+    document.addEventListener('visibilitychange', () => {
+      if (document.visibilityState === 'visible' && this._shouldHold && !this.sentinel) {
+        this.acquire();
+      }
+    });
+  }
+
+  async acquire() {
+    if (!this.supported) return;
+    this._shouldHold = true;
+    try {
+      this.sentinel = await navigator.wakeLock.request('screen');
+      this.badge.classList.add('visible');
+      this.sentinel.addEventListener('release', () => {
+        // Le navigateur a libéré le verrou de son propre chef (mise en
+        // arrière-plan, batterie faible sur certains appareils, etc.)
+        this.sentinel = null;
+        this.badge.classList.remove('visible');
+      });
+    } catch (err) {
+      // Échec possible : permission refusée, contrainte système (batterie),
+      // ou navigateur in-app restreint. On se contente du bandeau informatif.
+      this.sentinel = null;
+      this.badge.classList.remove('visible');
+      this.warning.classList.add('visible');
+    }
+  }
+
+  async release() {
+    this._shouldHold = false;
+    if (this.sentinel) {
+      try { await this.sentinel.release(); } catch (err) { /* déjà relâché */ }
+      this.sentinel = null;
+    }
+    this.badge.classList.remove('visible');
+  }
+}
+
 // ─────────────────────────────────────────────
 // Phases :
 //   ROLL         → attente du lancer ordinaire
 //   EDGING       → chrono entre deux rounds
 //   BONUS_ROLL   → attente du lancer bonus
-//   BONUS_TIMER  → chrono après double réussi  ← NOUVEAU (évite la confusion avec EDGING)
+//   BONUS_TIMER  → chrono après double réussi (séparé de EDGING pour éviter
+//                  toute confusion de contexte au moment du skip/fin)
 //   END          → partie terminée
 // ─────────────────────────────────────────────
 class Game {
   constructor() {
-    this.score   = 0;
-    this.lancers = 0;
-    this.phase   = 'ROLL';
-    this.timer   = null;   // ID de l'intervalle en cours, null quand aucun
-    this.d1      = 0;
-    this.d2      = 0;
-    this._a1     = null;   // IDs des animations de dés (protection double-tap)
-    this._a2     = null;
-    this._skipDelayTimer = null; // délai avant apparition du bouton skip
+    this.score    = 0;
+    this.lancers  = 0;
+    this.phase    = 'ROLL';
+    this.timer    = null;     // ID de l'intervalle en cours, null si aucun
+    this.endsAt   = null;     // timestamp epoch (ms) de fin de chrono — base
+                               // de calcul anti-dérive, indépendante des
+                               // setInterval qui peuvent être throttlés.
+    this.d1       = 0;
+    this.d2       = 0;
+    this._a1      = null;     // IDs des animations de dés (anti double-tap)
+    this._a2      = null;
+    this._skipDelayTimer = null;
+    this.wakeLock = new WakeLockManager();
+
+    this.restoreFromStorage();
   }
 
   get total() { return this.d1 + this.d2; }
 
-  vib(p) { if ('vibrate' in navigator) navigator.vibrate(p); }
+  vib(p) { if ('vibrate' in navigator) { try { navigator.vibrate(p); } catch (e) { /* ignoré */ } } }
 
   click() {
     if      (this.phase === 'ROLL')       this.roll(false);
@@ -273,6 +398,8 @@ class Game {
 
       if (isBonus) this.evalBonus();
       else { this.lancers++; this.evalRules(); }
+
+      this.persist();
     }, 1200);
   }
 
@@ -357,6 +484,15 @@ class Game {
     clearInterval(this.timer);
     this.timer = null;
 
+    // Base de temps absolue : on calcule le temps restant à partir d'un
+    // timestamp de fin plutôt que de décrémenter un compteur à chaque tick.
+    // Cela évite toute dérive si le thread JS est throttlé en arrière-plan,
+    // et permet de retrouver le temps restant exact après un reload de page.
+    this.endsAt = Date.now() + s * 1000;
+
+    // Le verrou d'écran ne doit vivre que pendant un chrono actif.
+    this.wakeLock.acquire();
+
     // Délai de 5 s avant que le bouton "Passer" devienne accessible
     clearTimeout(this._skipDelayTimer);
     const sk = document.getElementById('ui-skip');
@@ -370,20 +506,29 @@ class Game {
       }
     }, 5000);
 
-    const fmt = n => `${String(Math.floor(n/60)).padStart(2,'0')}:${String(n%60).padStart(2,'0')}`;
-    document.getElementById('ui-timer').innerText = fmt(s);
+    this.persist();
+    this.renderTimerTick();
 
-    this.timer = setInterval(() => {
-      s--;
-      document.getElementById('ui-timer').innerText = fmt(s);
-      if (s <= 0) this.endTimer();
-    }, 1000);
+    this.timer = setInterval(() => this.renderTimerTick(), 250);
+  }
+
+  // Calcule le temps restant à partir de endsAt et met à jour l'affichage.
+  // Appelé à intervalle régulier ET juste après un reload pour resynchroniser
+  // l'affichage avant même le premier tick.
+  renderTimerTick() {
+    const remainingMs = this.endsAt - Date.now();
+    const remainingS = Math.max(0, Math.ceil(remainingMs / 1000));
+    const fmt = n => `${String(Math.floor(n/60)).padStart(2,'0')}:${String(n%60).padStart(2,'0')}`;
+    document.getElementById('ui-timer').innerText = fmt(remainingS);
+    if (remainingMs <= 0) this.endTimer();
   }
 
   endTimer() {
     clearInterval(this.timer);
     this.timer = null;
+    this.endsAt = null;
     clearTimeout(this._skipDelayTimer);
+    this.wakeLock.release();
 
     // Cacher immédiatement le bouton skip
     const sk = document.getElementById('ui-skip');
@@ -398,6 +543,7 @@ class Game {
       this.setTag(`Victoire — Score final : ${this.score} / ${WIN}`);
       this.setText(`<span class="t-success">Félicitations ! Temps validé.</span><br><span class="t-success" style="font-size:1.1rem; font-weight:bold; display:block; margin-top:8px;">VOUS AVEZ LE DROIT DE JOUIR !</span>`);
       this.updateUI();
+      this.persist();
       return;
     }
 
@@ -409,6 +555,7 @@ class Game {
       this.setTag('Bonus validé !');
       this.setText(`<span class="t-bonus">Temps bonus écoulé !</span><br>Vous avez gagné le droit à votre <span class="t-bonus">orgasme ruiné</span>. Masturbez-vous jusqu'à l'orgasme, puis stoppez toute stimulation au dernier instant.`);
       this.updateUI();
+      this.persist();
       return;
     }
 
@@ -418,6 +565,7 @@ class Game {
       this.setTag('Verdict : score insuffisant');
       this.setText(`Fin des 5 rounds. Votre score est insuffisant : ${this.score}/${WIN}.<br><span class="t-bonus">Lancer bonus :</span> Tentez un double pour un orgasme ruiné !`);
       this.updateUI();
+      this.persist();
       return;
     }
 
@@ -426,11 +574,13 @@ class Game {
     this.setTag('Chrono terminé');
     this.setText('Temps validé. Relancez les dés sans attendre.');
     this.updateUI();
+    this.persist();
   }
 
   skip() {
     clearInterval(this.timer);
     this.timer = null;
+    this.endsAt = Date.now(); // force un temps restant nul pour endTimer()
     this.endTimer();
   }
 
@@ -498,18 +648,118 @@ class Game {
   setTag(t) { document.getElementById('ui-tag').innerText  = t; }
   setText(h) { document.getElementById('ui-text').innerHTML = h; }
 
+  // ── Persistance ──────────────────────────────────────────────────────
+  // Sauvegarde l'état minimal nécessaire pour reprendre une session après
+  // un reload accidentel (navigation, crash de l'onglet, etc.). On ne
+  // sauvegarde pas les phases transitoires de lancer (l'animation des dés
+  // n'a pas besoin d'être restaurée).
+  persist() {
+    try {
+      const snapshot = {
+        score: this.score,
+        lancers: this.lancers,
+        phase: this.phase,
+        d1: this.d1,
+        d2: this.d2,
+        endsAt: this.endsAt
+      };
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(snapshot));
+    } catch (e) {
+      // Stockage indisponible (navigation privée, quota) : tant pis, le
+      // jeu fonctionne simplement sans persistance entre sessions.
+    }
+  }
+
+  restoreFromStorage() {
+    let snapshot = null;
+    try {
+      const raw = localStorage.getItem(STORAGE_KEY);
+      if (raw) snapshot = JSON.parse(raw);
+    } catch (e) {
+      snapshot = null;
+    }
+
+    if (!snapshot) {
+      renderDie(document.getElementById('d1'), '?');
+      renderDie(document.getElementById('d2'), '?');
+      return;
+    }
+
+    this.score   = snapshot.score   ?? 0;
+    this.lancers = snapshot.lancers ?? 0;
+    this.phase   = snapshot.phase   ?? 'ROLL';
+    this.d1      = snapshot.d1      ?? 0;
+    this.d2      = snapshot.d2      ?? 0;
+
+    if (this.d1 && this.d2) {
+      renderDie(document.getElementById('d1'), this.d1);
+      renderDie(document.getElementById('d2'), this.d2);
+    } else {
+      renderDie(document.getElementById('d1'), '?');
+      renderDie(document.getElementById('d2'), '?');
+    }
+
+    this.updateDots();
+
+    // Si un chrono était en cours, on calcule le temps restant réel.
+    // S'il s'est déjà écoulé pendant l'absence, on déclenche endTimer
+    // immédiatement pour faire avancer le jeu à l'état suivant.
+    if ((this.phase === 'EDGING' || this.phase === 'BONUS_TIMER') && snapshot.endsAt) {
+      this.endsAt = snapshot.endsAt;
+      const remainingMs = this.endsAt - Date.now();
+
+      if (remainingMs <= 0) {
+        this.setTag('Reprise de session');
+        this.updateUI();
+        this.endTimer();
+      } else {
+        this.setTag('Session reprise');
+        this.setText('Chrono restauré après une interruption.');
+        this.updateUI();
+        this.wakeLock.acquire();
+
+        const sk = document.getElementById('ui-skip');
+        this._skipDelayTimer = setTimeout(() => {
+          if (this.phase === 'EDGING' || this.phase === 'BONUS_TIMER') {
+            sk.style.opacity = '1';
+            sk.style.pointerEvents = 'auto';
+          }
+        }, 5000);
+
+        this.renderTimerTick();
+        this.timer = setInterval(() => this.renderTimerTick(), 250);
+      }
+    } else {
+      // États sans chrono actif : on réaffiche simplement le texte adapté
+      // à la phase pour ne pas perdre le contexte au reload.
+      if (this.phase === 'BONUS_ROLL') {
+        this.setTag('Verdict : score insuffisant');
+        this.setText(`Fin des 5 rounds. Votre score est insuffisant : ${this.score}/${WIN}.<br><span class="t-bonus">Lancer bonus :</span> Tentez un double pour un orgasme ruiné !`);
+      } else if (this.phase === 'END') {
+        this.setTag('Partie terminée');
+        this.setText('Session précédente terminée. Lancez une nouvelle partie.');
+      } else {
+        this.setTag('Statut');
+        this.setText('Prêt ? Lancez les dés pour démarrer le Round 1.');
+      }
+      this.updateUI();
+    }
+  }
+
   reset() {
     this.score   = 0;
     this.lancers = 0;
     this.phase   = 'ROLL';
     this.d1      = 0;
     this.d2      = 0;
+    this.endsAt  = null;
 
     // Nettoyage complet de tous les timers/intervalles actifs
     clearInterval(this.timer);       this.timer   = null;
     clearInterval(this._a1);         this._a1     = null;
     clearInterval(this._a2);         this._a2     = null;
     clearTimeout(this._skipDelayTimer); this._skipDelayTimer = null;
+    this.wakeLock.release();
 
     renderDie(document.getElementById('d1'), '?');
     renderDie(document.getElementById('d2'), '?');
@@ -521,12 +771,12 @@ class Game {
     // updateDots() centralise la logique — pas de boucle dupliquée
     this.updateDots();
     this.updateUI();
+
+    try { localStorage.removeItem(STORAGE_KEY); } catch (e) { /* ignoré */ }
   }
 }
 
 const G = new Game();
-renderDie(document.getElementById('d1'), '?');
-renderDie(document.getElementById('d2'), '?');
 </script>
 </body>
 </html>
